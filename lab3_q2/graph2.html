@@ -1,0 +1,462 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #132d2e;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Abu Dhabi">Abu Dhabi</option>
+                                
+                                    <option value="Ahmedabad">Ahmedabad</option>
+                                
+                                    <option value="Bagdogra">Bagdogra</option>
+                                
+                                    <option value="Bangkok">Bangkok</option>
+                                
+                                    <option value="Bengaluru">Bengaluru</option>
+                                
+                                    <option value="Delhi">Delhi</option>
+                                
+                                    <option value="Goa">Goa</option>
+                                
+                                    <option value="Guwahati">Guwahati</option>
+                                
+                                    <option value="Jammu">Jammu</option>
+                                
+                                    <option value="Kannur">Kannur</option>
+                                
+                                    <option value="Kochi">Kochi</option>
+                                
+                                    <option value="Leh">Leh</option>
+                                
+                                    <option value="Male">Male</option>
+                                
+                                    <option value="Mumbai">Mumbai</option>
+                                
+                                    <option value="Patna">Patna</option>
+                                
+                                    <option value="Pune">Pune</option>
+                                
+                                    <option value="Ranchi">Ranchi</option>
+                                
+                                    <option value="Srinagar">Srinagar</option>
+                                
+                                    <option value="Varanasi">Varanasi</option>
+                                
+                                    <option value="Amritsar">Amritsar</option>
+                                
+                                    <option value="Chandigarh">Chandigarh</option>
+                                
+                                    <option value="Chennai">Chennai</option>
+                                
+                                    <option value="Dehra Dun">Dehra Dun</option>
+                                
+                                    <option value="Goa-New Goa">Goa-New Goa</option>
+                                
+                                    <option value="Hyderabad">Hyderabad</option>
+                                
+                                    <option value="Jaipur">Jaipur</option>
+                                
+                                    <option value="Lucknow">Lucknow</option>
+                                
+                                    <option value="Nagpur">Nagpur</option>
+                                
+                                    <option value="Phuket">Phuket</option>
+                                
+                                    <option value="Kolkata">Kolkata</option>
+                                
+                                    <option value="Kuwait">Kuwait</option>
+                                
+                                    <option value="Muscat">Muscat</option>
+                                
+                                    <option value="Port Blair">Port Blair</option>
+                                
+                                    <option value="Thoise">Thoise</option>
+                                
+                                    <option value="Dammam">Dammam</option>
+                                
+                                    <option value="Dubai">Dubai</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Abu Dhabi", "label": "Abu Dhabi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ahmedabad", "label": "Ahmedabad", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bagdogra", "label": "Bagdogra", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bangkok", "label": "Bangkok", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bengaluru", "label": "Bengaluru", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Delhi", "label": "Delhi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Goa", "label": "Goa", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Guwahati", "label": "Guwahati", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jammu", "label": "Jammu", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kannur", "label": "Kannur", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kochi", "label": "Kochi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Leh", "label": "Leh", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Male", "label": "Male", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mumbai", "label": "Mumbai", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Patna", "label": "Patna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pune", "label": "Pune", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ranchi", "label": "Ranchi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Srinagar", "label": "Srinagar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Varanasi", "label": "Varanasi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Amritsar", "label": "Amritsar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Chandigarh", "label": "Chandigarh", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Chennai", "label": "Chennai", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dehra Dun", "label": "Dehra Dun", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Goa-New Goa", "label": "Goa-New Goa", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hyderabad", "label": "Hyderabad", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jaipur", "label": "Jaipur", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Lucknow", "label": "Lucknow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nagpur", "label": "Nagpur", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Phuket", "label": "Phuket", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kolkata", "label": "Kolkata", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kuwait", "label": "Kuwait", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Muscat", "label": "Muscat", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Port Blair", "label": "Port Blair", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Thoise", "label": "Thoise", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dammam", "label": "Dammam", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dubai", "label": "Dubai", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"from": "Abu Dhabi", "to": "Ahmedabad", "width": 1}, {"from": "Abu Dhabi", "to": "Bagdogra", "width": 1}, {"from": "Abu Dhabi", "to": "Bangkok", "width": 1}, {"from": "Abu Dhabi", "to": "Bengaluru", "width": 1}, {"from": "Abu Dhabi", "to": "Delhi", "width": 1}, {"from": "Abu Dhabi", "to": "Goa", "width": 1}, {"from": "Abu Dhabi", "to": "Guwahati", "width": 1}, {"from": "Abu Dhabi", "to": "Jammu", "width": 1}, {"from": "Abu Dhabi", "to": "Kannur", "width": 1}, {"from": "Abu Dhabi", "to": "Kochi", "width": 1}, {"from": "Abu Dhabi", "to": "Leh", "width": 1}, {"from": "Abu Dhabi", "to": "Male", "width": 1}, {"from": "Abu Dhabi", "to": "Mumbai", "width": 1}, {"from": "Abu Dhabi", "to": "Patna", "width": 1}, {"from": "Abu Dhabi", "to": "Pune", "width": 1}, {"from": "Abu Dhabi", "to": "Ranchi", "width": 1}, {"from": "Abu Dhabi", "to": "Srinagar", "width": 1}, {"from": "Abu Dhabi", "to": "Varanasi", "width": 1}, {"from": "Abu Dhabi", "to": "Amritsar", "width": 1}, {"from": "Abu Dhabi", "to": "Chandigarh", "width": 1}, {"from": "Abu Dhabi", "to": "Chennai", "width": 1}, {"from": "Abu Dhabi", "to": "Dehra Dun", "width": 1}, {"from": "Abu Dhabi", "to": "Goa-New Goa", "width": 1}, {"from": "Abu Dhabi", "to": "Hyderabad", "width": 1}, {"from": "Abu Dhabi", "to": "Jaipur", "width": 1}, {"from": "Abu Dhabi", "to": "Lucknow", "width": 1}, {"from": "Abu Dhabi", "to": "Nagpur", "width": 1}, {"from": "Abu Dhabi", "to": "Phuket", "width": 1}, {"from": "Ahmedabad", "to": "Amritsar", "width": 1}, {"from": "Ahmedabad", "to": "Bagdogra", "width": 1}, {"from": "Ahmedabad", "to": "Bangkok", "width": 1}, {"from": "Ahmedabad", "to": "Bengaluru", "width": 1}, {"from": "Ahmedabad", "to": "Chandigarh", "width": 1}, {"from": "Ahmedabad", "to": "Chennai", "width": 1}, {"from": "Ahmedabad", "to": "Dehra Dun", "width": 1}, {"from": "Ahmedabad", "to": "Delhi", "width": 1}, {"from": "Ahmedabad", "to": "Goa", "width": 1}, {"from": "Ahmedabad", "to": "Goa-New Goa", "width": 1}, {"from": "Ahmedabad", "to": "Guwahati", "width": 1}, {"from": "Ahmedabad", "to": "Hyderabad", "width": 1}, {"from": "Ahmedabad", "to": "Kannur", "width": 1}, {"from": "Ahmedabad", "to": "Kochi", "width": 1}, {"from": "Ahmedabad", "to": "Kolkata", "width": 1}, {"from": "Ahmedabad", "to": "Kuwait", "width": 1}, {"from": "Ahmedabad", "to": "Leh", "width": 1}, {"from": "Ahmedabad", "to": "Lucknow", "width": 1}, {"from": "Ahmedabad", "to": "Male", "width": 1}, {"from": "Ahmedabad", "to": "Mumbai", "width": 1}, {"from": "Ahmedabad", "to": "Muscat", "width": 1}, {"from": "Ahmedabad", "to": "Nagpur", "width": 1}, {"from": "Ahmedabad", "to": "Patna", "width": 1}, {"from": "Ahmedabad", "to": "Phuket", "width": 1}, {"from": "Ahmedabad", "to": "Port Blair", "width": 1}, {"from": "Ahmedabad", "to": "Pune", "width": 1}, {"from": "Ahmedabad", "to": "Ranchi", "width": 1}, {"from": "Ahmedabad", "to": "Srinagar", "width": 1}, {"from": "Ahmedabad", "to": "Varanasi", "width": 1}, {"from": "Ahmedabad", "to": "Jammu", "width": 1}, {"from": "Bagdogra", "to": "Delhi", "width": 1}, {"from": "Bagdogra", "to": "Goa", "width": 1}, {"from": "Bagdogra", "to": "Guwahati", "width": 1}, {"from": "Bagdogra", "to": "Hyderabad", "width": 1}, {"from": "Bagdogra", "to": "Kolkata", "width": 1}, {"from": "Bagdogra", "to": "Lucknow", "width": 1}, {"from": "Bagdogra", "to": "Mumbai", "width": 1}, {"from": "Bagdogra", "to": "Nagpur", "width": 1}, {"from": "Bagdogra", "to": "Phuket", "width": 1}, {"from": "Bagdogra", "to": "Pune", "width": 1}, {"from": "Bagdogra", "to": "Bangkok", "width": 1}, {"from": "Bagdogra", "to": "Bengaluru", "width": 1}, {"from": "Bagdogra", "to": "Leh", "width": 1}, {"from": "Bagdogra", "to": "Patna", "width": 1}, {"from": "Bagdogra", "to": "Ranchi", "width": 1}, {"from": "Bagdogra", "to": "Srinagar", "width": 1}, {"from": "Bagdogra", "to": "Varanasi", "width": 1}, {"from": "Bangkok", "to": "Amritsar", "width": 1}, {"from": "Bangkok", "to": "Bengaluru", "width": 1}, {"from": "Bangkok", "to": "Chennai", "width": 1}, {"from": "Bangkok", "to": "Delhi", "width": 1}, {"from": "Bangkok", "to": "Goa", "width": 1}, {"from": "Bangkok", "to": "Hyderabad", "width": 1}, {"from": "Bangkok", "to": "Jaipur", "width": 1}, {"from": "Bangkok", "to": "Leh", "width": 1}, {"from": "Bangkok", "to": "Lucknow", "width": 1}, {"from": "Bangkok", "to": "Mumbai", "width": 1}, {"from": "Bangkok", "to": "Muscat", "width": 1}, {"from": "Bangkok", "to": "Nagpur", "width": 1}, {"from": "Bangkok", "to": "Pune", "width": 1}, {"from": "Bangkok", "to": "Srinagar", "width": 1}, {"from": "Bangkok", "to": "Chandigarh", "width": 1}, {"from": "Bangkok", "to": "Guwahati", "width": 1}, {"from": "Bangkok", "to": "Kochi", "width": 1}, {"from": "Bangkok", "to": "Kolkata", "width": 1}, {"from": "Bangkok", "to": "Male", "width": 1}, {"from": "Bangkok", "to": "Patna", "width": 1}, {"from": "Bangkok", "to": "Ranchi", "width": 1}, {"from": "Bangkok", "to": "Varanasi", "width": 1}, {"from": "Bengaluru", "to": "Amritsar", "width": 1}, {"from": "Bengaluru", "to": "Chandigarh", "width": 1}, {"from": "Bengaluru", "to": "Chennai", "width": 1}, {"from": "Bengaluru", "to": "Dehra Dun", "width": 1}, {"from": "Bengaluru", "to": "Delhi", "width": 1}, {"from": "Bengaluru", "to": "Goa", "width": 1}, {"from": "Bengaluru", "to": "Goa-New Goa", "width": 1}, {"from": "Bengaluru", "to": "Guwahati", "width": 1}, {"from": "Bengaluru", "to": "Hyderabad", "width": 1}, {"from": "Bengaluru", "to": "Jaipur", "width": 1}, {"from": "Bengaluru", "to": "Kannur", "width": 1}, {"from": "Bengaluru", "to": "Kochi", "width": 1}, {"from": "Bengaluru", "to": "Kolkata", "width": 1}, {"from": "Bengaluru", "to": "Kuwait", "width": 1}, {"from": "Bengaluru", "to": "Leh", "width": 1}, {"from": "Bengaluru", "to": "Lucknow", "width": 1}, {"from": "Bengaluru", "to": "Male", "width": 1}, {"from": "Bengaluru", "to": "Mumbai", "width": 1}, {"from": "Bengaluru", "to": "Muscat", "width": 1}, {"from": "Bengaluru", "to": "Nagpur", "width": 1}, {"from": "Bengaluru", "to": "Patna", "width": 1}, {"from": "Bengaluru", "to": "Phuket", "width": 1}, {"from": "Bengaluru", "to": "Port Blair", "width": 1}, {"from": "Bengaluru", "to": "Pune", "width": 1}, {"from": "Bengaluru", "to": "Ranchi", "width": 1}, {"from": "Bengaluru", "to": "Srinagar", "width": 1}, {"from": "Bengaluru", "to": "Varanasi", "width": 1}, {"from": "Bengaluru", "to": "Jammu", "width": 1}, {"from": "Delhi", "to": "Chandigarh", "width": 1}, {"from": "Delhi", "to": "Chennai", "width": 1}, {"from": "Delhi", "to": "Goa", "width": 1}, {"from": "Delhi", "to": "Goa-New Goa", "width": 1}, {"from": "Delhi", "to": "Guwahati", "width": 1}, {"from": "Delhi", "to": "Hyderabad", "width": 1}, {"from": "Delhi", "to": "Jaipur", "width": 1}, {"from": "Delhi", "to": "Jammu", "width": 1}, {"from": "Delhi", "to": "Kannur", "width": 1}, {"from": "Delhi", "to": "Kochi", "width": 1}, {"from": "Delhi", "to": "Kolkata", "width": 1}, {"from": "Delhi", "to": "Kuwait", "width": 1}, {"from": "Delhi", "to": "Leh", "width": 1}, {"from": "Delhi", "to": "Lucknow", "width": 1}, {"from": "Delhi", "to": "Male", "width": 1}, {"from": "Delhi", "to": "Mumbai", "width": 1}, {"from": "Delhi", "to": "Muscat", "width": 1}, {"from": "Delhi", "to": "Nagpur", "width": 1}, {"from": "Delhi", "to": "Patna", "width": 1}, {"from": "Delhi", "to": "Phuket", "width": 1}, {"from": "Delhi", "to": "Port Blair", "width": 1}, {"from": "Delhi", "to": "Pune", "width": 1}, {"from": "Delhi", "to": "Ranchi", "width": 1}, {"from": "Delhi", "to": "Srinagar", "width": 1}, {"from": "Delhi", "to": "Thoise", "width": 1}, {"from": "Delhi", "to": "Varanasi", "width": 1}, {"from": "Goa", "to": "Amritsar", "width": 1}, {"from": "Goa", "to": "Chandigarh", "width": 1}, {"from": "Goa", "to": "Chennai", "width": 1}, {"from": "Goa", "to": "Dehra Dun", "width": 1}, {"from": "Goa", "to": "Guwahati", "width": 1}, {"from": "Goa", "to": "Hyderabad", "width": 1}, {"from": "Goa", "to": "Jaipur", "width": 1}, {"from": "Goa", "to": "Jammu", "width": 1}, {"from": "Goa", "to": "Kannur", "width": 1}, {"from": "Goa", "to": "Kochi", "width": 1}, {"from": "Goa", "to": "Kolkata", "width": 1}, {"from": "Goa", "to": "Kuwait", "width": 1}, {"from": "Goa", "to": "Leh", "width": 1}, {"from": "Goa", "to": "Lucknow", "width": 1}, {"from": "Goa", "to": "Male", "width": 1}, {"from": "Goa", "to": "Mumbai", "width": 1}, {"from": "Goa", "to": "Muscat", "width": 1}, {"from": "Goa", "to": "Nagpur", "width": 1}, {"from": "Goa", "to": "Patna", "width": 1}, {"from": "Goa", "to": "Phuket", "width": 1}, {"from": "Goa", "to": "Pune", "width": 1}, {"from": "Goa", "to": "Ranchi", "width": 1}, {"from": "Goa", "to": "Srinagar", "width": 1}, {"from": "Goa", "to": "Varanasi", "width": 1}, {"from": "Guwahati", "to": "Hyderabad", "width": 1}, {"from": "Guwahati", "to": "Kolkata", "width": 1}, {"from": "Guwahati", "to": "Leh", "width": 1}, {"from": "Guwahati", "to": "Lucknow", "width": 1}, {"from": "Guwahati", "to": "Mumbai", "width": 1}, {"from": "Guwahati", "to": "Nagpur", "width": 1}, {"from": "Guwahati", "to": "Patna", "width": 1}, {"from": "Guwahati", "to": "Phuket", "width": 1}, {"from": "Guwahati", "to": "Pune", "width": 1}, {"from": "Guwahati", "to": "Ranchi", "width": 1}, {"from": "Guwahati", "to": "Srinagar", "width": 1}, {"from": "Jammu", "to": "Amritsar", "width": 1}, {"from": "Jammu", "to": "Chandigarh", "width": 1}, {"from": "Jammu", "to": "Hyderabad", "width": 1}, {"from": "Jammu", "to": "Lucknow", "width": 1}, {"from": "Jammu", "to": "Mumbai", "width": 1}, {"from": "Jammu", "to": "Nagpur", "width": 1}, {"from": "Jammu", "to": "Patna", "width": 1}, {"from": "Jammu", "to": "Pune", "width": 1}, {"from": "Jammu", "to": "Ranchi", "width": 1}, {"from": "Jammu", "to": "Srinagar", "width": 1}, {"from": "Jammu", "to": "Kuwait", "width": 1}, {"from": "Jammu", "to": "Leh", "width": 1}, {"from": "Kannur", "to": "Amritsar", "width": 1}, {"from": "Kannur", "to": "Chandigarh", "width": 1}, {"from": "Kannur", "to": "Dammam", "width": 1}, {"from": "Kannur", "to": "Dubai", "width": 1}, {"from": "Kannur", "to": "Goa-New Goa", "width": 1}, {"from": "Kannur", "to": "Jaipur", "width": 1}, {"from": "Kannur", "to": "Dehra Dun", "width": 1}, {"from": "Kannur", "to": "Kochi", "width": 1}, {"from": "Kannur", "to": "Kuwait", "width": 1}, {"from": "Kannur", "to": "Lucknow", "width": 1}, {"from": "Kannur", "to": "Male", "width": 1}, {"from": "Kannur", "to": "Mumbai", "width": 1}, {"from": "Kannur", "to": "Muscat", "width": 1}, {"from": "Kannur", "to": "Nagpur", "width": 1}, {"from": "Kannur", "to": "Patna", "width": 1}, {"from": "Kannur", "to": "Ranchi", "width": 1}, {"from": "Kannur", "to": "Varanasi", "width": 1}, {"from": "Kochi", "to": "Amritsar", "width": 1}, {"from": "Kochi", "to": "Chandigarh", "width": 1}, {"from": "Kochi", "to": "Goa-New Goa", "width": 1}, {"from": "Kochi", "to": "Jaipur", "width": 1}, {"from": "Kochi", "to": "Chennai", "width": 1}, {"from": "Kochi", "to": "Dehra Dun", "width": 1}, {"from": "Kochi", "to": "Kolkata", "width": 1}, {"from": "Kochi", "to": "Kuwait", "width": 1}, {"from": "Kochi", "to": "Lucknow", "width": 1}, {"from": "Kochi", "to": "Male", "width": 1}, {"from": "Kochi", "to": "Mumbai", "width": 1}, {"from": "Kochi", "to": "Muscat", "width": 1}, {"from": "Kochi", "to": "Nagpur", "width": 1}, {"from": "Kochi", "to": "Patna", "width": 1}, {"from": "Kochi", "to": "Phuket", "width": 1}, {"from": "Kochi", "to": "Port Blair", "width": 1}, {"from": "Kochi", "to": "Pune", "width": 1}, {"from": "Kochi", "to": "Ranchi", "width": 1}, {"from": "Kochi", "to": "Varanasi", "width": 1}, {"from": "Leh", "to": "Chandigarh", "width": 1}, {"from": "Leh", "to": "Hyderabad", "width": 1}, {"from": "Leh", "to": "Lucknow", "width": 1}, {"from": "Leh", "to": "Mumbai", "width": 1}, {"from": "Leh", "to": "Nagpur", "width": 1}, {"from": "Leh", "to": "Patna", "width": 1}, {"from": "Leh", "to": "Pune", "width": 1}, {"from": "Leh", "to": "Ranchi", "width": 1}, {"from": "Leh", "to": "Srinagar", "width": 1}, {"from": "Leh", "to": "Male", "width": 1}, {"from": "Leh", "to": "Varanasi", "width": 1}, {"from": "Male", "to": "Amritsar", "width": 1}, {"from": "Male", "to": "Jaipur", "width": 1}, {"from": "Male", "to": "Chennai", "width": 1}, {"from": "Male", "to": "Kolkata", "width": 1}, {"from": "Male", "to": "Lucknow", "width": 1}, {"from": "Male", "to": "Mumbai", "width": 1}, {"from": "Male", "to": "Muscat", "width": 1}, {"from": "Male", "to": "Nagpur", "width": 1}, {"from": "Male", "to": "Phuket", "width": 1}, {"from": "Male", "to": "Pune", "width": 1}, {"from": "Male", "to": "Patna", "width": 1}, {"from": "Male", "to": "Ranchi", "width": 1}, {"from": "Male", "to": "Srinagar", "width": 1}, {"from": "Male", "to": "Varanasi", "width": 1}, {"from": "Mumbai", "to": "Amritsar", "width": 1}, {"from": "Mumbai", "to": "Chandigarh", "width": 1}, {"from": "Mumbai", "to": "Chennai", "width": 1}, {"from": "Mumbai", "to": "Dammam", "width": 1}, {"from": "Mumbai", "to": "Dehra Dun", "width": 1}, {"from": "Mumbai", "to": "Goa-New Goa", "width": 1}, {"from": "Mumbai", "to": "Hyderabad", "width": 1}, {"from": "Mumbai", "to": "Jaipur", "width": 1}, {"from": "Mumbai", "to": "Kolkata", "width": 1}, {"from": "Mumbai", "to": "Kuwait", "width": 1}, {"from": "Mumbai", "to": "Lucknow", "width": 1}, {"from": "Mumbai", "to": "Muscat", "width": 1}, {"from": "Mumbai", "to": "Nagpur", "width": 1}, {"from": "Mumbai", "to": "Patna", "width": 1}, {"from": "Mumbai", "to": "Phuket", "width": 1}, {"from": "Mumbai", "to": "Port Blair", "width": 1}, {"from": "Mumbai", "to": "Pune", "width": 1}, {"from": "Mumbai", "to": "Ranchi", "width": 1}, {"from": "Mumbai", "to": "Srinagar", "width": 1}, {"from": "Mumbai", "to": "Varanasi", "width": 1}, {"from": "Patna", "to": "Amritsar", "width": 1}, {"from": "Patna", "to": "Hyderabad", "width": 1}, {"from": "Patna", "to": "Jaipur", "width": 1}, {"from": "Patna", "to": "Kuwait", "width": 1}, {"from": "Patna", "to": "Lucknow", "width": 1}, {"from": "Patna", "to": "Muscat", "width": 1}, {"from": "Patna", "to": "Nagpur", "width": 1}, {"from": "Patna", "to": "Chennai", "width": 1}, {"from": "Patna", "to": "Kolkata", "width": 1}, {"from": "Patna", "to": "Phuket", "width": 1}, {"from": "Patna", "to": "Pune", "width": 1}, {"from": "Patna", "to": "Srinagar", "width": 1}, {"from": "Patna", "to": "Varanasi", "width": 1}, {"from": "Pune", "to": "Chandigarh", "width": 1}, {"from": "Pune", "to": "Goa-New Goa", "width": 1}, {"from": "Pune", "to": "Hyderabad", "width": 1}, {"from": "Pune", "to": "Jaipur", "width": 1}, {"from": "Pune", "to": "Kolkata", "width": 1}, {"from": "Pune", "to": "Lucknow", "width": 1}, {"from": "Pune", "to": "Nagpur", "width": 1}, {"from": "Pune", "to": "Phuket", "width": 1}, {"from": "Pune", "to": "Port Blair", "width": 1}, {"from": "Pune", "to": "Ranchi", "width": 1}, {"from": "Pune", "to": "Srinagar", "width": 1}, {"from": "Pune", "to": "Varanasi", "width": 1}, {"from": "Ranchi", "to": "Amritsar", "width": 1}, {"from": "Ranchi", "to": "Chandigarh", "width": 1}, {"from": "Ranchi", "to": "Goa-New Goa", "width": 1}, {"from": "Ranchi", "to": "Hyderabad", "width": 1}, {"from": "Ranchi", "to": "Jaipur", "width": 1}, {"from": "Ranchi", "to": "Kuwait", "width": 1}, {"from": "Ranchi", "to": "Lucknow", "width": 1}, {"from": "Ranchi", "to": "Muscat", "width": 1}, {"from": "Ranchi", "to": "Nagpur", "width": 1}, {"from": "Ranchi", "to": "Chennai", "width": 1}, {"from": "Ranchi", "to": "Kolkata", "width": 1}, {"from": "Ranchi", "to": "Phuket", "width": 1}, {"from": "Ranchi", "to": "Srinagar", "width": 1}, {"from": "Ranchi", "to": "Varanasi", "width": 1}, {"from": "Srinagar", "to": "Chandigarh", "width": 1}, {"from": "Srinagar", "to": "Hyderabad", "width": 1}, {"from": "Srinagar", "to": "Lucknow", "width": 1}, {"from": "Srinagar", "to": "Nagpur", "width": 1}, {"from": "Srinagar", "to": "Phuket", "width": 1}, {"from": "Srinagar", "to": "Varanasi", "width": 1}, {"from": "Varanasi", "to": "Amritsar", "width": 1}, {"from": "Varanasi", "to": "Chandigarh", "width": 1}, {"from": "Varanasi", "to": "Jaipur", "width": 1}, {"from": "Varanasi", "to": "Kuwait", "width": 1}, {"from": "Varanasi", "to": "Lucknow", "width": 1}, {"from": "Varanasi", "to": "Muscat", "width": 1}, {"from": "Varanasi", "to": "Nagpur", "width": 1}, {"from": "Varanasi", "to": "Chennai", "width": 1}, {"from": "Varanasi", "to": "Kolkata", "width": 1}, {"from": "Varanasi", "to": "Phuket", "width": 1}, {"from": "Amritsar", "to": "Chennai", "width": 1}, {"from": "Amritsar", "to": "Dehra Dun", "width": 1}, {"from": "Amritsar", "to": "Goa-New Goa", "width": 1}, {"from": "Amritsar", "to": "Kolkata", "width": 1}, {"from": "Amritsar", "to": "Lucknow", "width": 1}, {"from": "Amritsar", "to": "Muscat", "width": 1}, {"from": "Amritsar", "to": "Nagpur", "width": 1}, {"from": "Amritsar", "to": "Phuket", "width": 1}, {"from": "Amritsar", "to": "Jaipur", "width": 1}, {"from": "Amritsar", "to": "Kuwait", "width": 1}, {"from": "Chandigarh", "to": "Chennai", "width": 1}, {"from": "Chandigarh", "to": "Goa-New Goa", "width": 1}, {"from": "Chandigarh", "to": "Hyderabad", "width": 1}, {"from": "Chandigarh", "to": "Jaipur", "width": 1}, {"from": "Chandigarh", "to": "Kolkata", "width": 1}, {"from": "Chandigarh", "to": "Kuwait", "width": 1}, {"from": "Chandigarh", "to": "Lucknow", "width": 1}, {"from": "Chandigarh", "to": "Muscat", "width": 1}, {"from": "Chandigarh", "to": "Nagpur", "width": 1}, {"from": "Chandigarh", "to": "Phuket", "width": 1}, {"from": "Chennai", "to": "Jaipur", "width": 1}, {"from": "Chennai", "to": "Kuwait", "width": 1}, {"from": "Chennai", "to": "Muscat", "width": 1}, {"from": "Chennai", "to": "Nagpur", "width": 1}, {"from": "Chennai", "to": "Phuket", "width": 1}, {"from": "Chennai", "to": "Port Blair", "width": 1}, {"from": "Chennai", "to": "Dehra Dun", "width": 1}, {"from": "Chennai", "to": "Goa-New Goa", "width": 1}, {"from": "Chennai", "to": "Kolkata", "width": 1}, {"from": "Chennai", "to": "Lucknow", "width": 1}, {"from": "Dehra Dun", "to": "Jaipur", "width": 1}, {"from": "Dehra Dun", "to": "Muscat", "width": 1}, {"from": "Dehra Dun", "to": "Nagpur", "width": 1}, {"from": "Goa-New Goa", "to": "Hyderabad", "width": 1}, {"from": "Goa-New Goa", "to": "Jaipur", "width": 1}, {"from": "Goa-New Goa", "to": "Kolkata", "width": 1}, {"from": "Goa-New Goa", "to": "Kuwait", "width": 1}, {"from": "Goa-New Goa", "to": "Lucknow", "width": 1}, {"from": "Goa-New Goa", "to": "Muscat", "width": 1}, {"from": "Goa-New Goa", "to": "Nagpur", "width": 1}, {"from": "Goa-New Goa", "to": "Phuket", "width": 1}, {"from": "Hyderabad", "to": "Lucknow", "width": 1}, {"from": "Hyderabad", "to": "Nagpur", "width": 1}, {"from": "Hyderabad", "to": "Kolkata", "width": 1}, {"from": "Hyderabad", "to": "Phuket", "width": 1}, {"from": "Kolkata", "to": "Jaipur", "width": 1}, {"from": "Kolkata", "to": "Lucknow", "width": 1}, {"from": "Kolkata", "to": "Muscat", "width": 1}, {"from": "Kolkata", "to": "Nagpur", "width": 1}, {"from": "Kolkata", "to": "Phuket", "width": 1}, {"from": "Kolkata", "to": "Port Blair", "width": 1}, {"from": "Kuwait", "to": "Jaipur", "width": 1}, {"from": "Kuwait", "to": "Lucknow", "width": 1}, {"from": "Lucknow", "to": "Jaipur", "width": 1}, {"from": "Lucknow", "to": "Muscat", "width": 1}, {"from": "Lucknow", "to": "Nagpur", "width": 1}, {"from": "Lucknow", "to": "Phuket", "width": 1}, {"from": "Muscat", "to": "Jaipur", "width": 1}, {"from": "Muscat", "to": "Nagpur", "width": 1}, {"from": "Muscat", "to": "Phuket", "width": 1}, {"from": "Nagpur", "to": "Jaipur", "width": 1}, {"from": "Nagpur", "to": "Phuket", "width": 1}, {"from": "Nagpur", "to": "Port Blair", "width": 1}, {"from": "Phuket", "to": "Jaipur", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "repulsion": {
+            "centralGravity": 0.2,
+            "damping": 0.09,
+            "nodeDistance": 200,
+            "springConstant": 0.05,
+            "springLength": 150
+        },
+        "solver": "repulsion",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
